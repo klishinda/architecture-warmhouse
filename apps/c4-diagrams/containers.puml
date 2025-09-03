@@ -1,0 +1,98 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "Пользователь", "Веб / мобильный пользователь")
+
+System_Boundary(s1, "Interface", "Контекст интерфейсов") {
+
+  Container(web, "Web интерфейс", "React", "Веб-приложение для управления устройствами и оплатой")
+  Container(mobile, "Mobile интерфейс", "iOS/Android", "Мобильное приложение для управления устройствами и просмотра данных")
+
+}
+
+System_Boundary(s2, "Subscription", "Контекст подписок") {
+  Container(payment, "Сервис оплаты", "Payment gateway", "Обработка платежей")
+  Container(subscriptions, "Сервис управления подписками", "Go", "Личный кабинет, история оплат, подписки")
+  ContainerDb(subscriptions_db, "БД для информации по подпискам", "Postgresql", "История оплат, текущие подписки")
+}
+
+
+System_Boundary(s3, "Telemetry", "Контекст телеметрии") {
+  ContainerDb(telemetry_db, "БД для телеметрии", "Timescaledb + Postgres", "Отдельная БД для телеметрии, с обработанными данными")
+  ContainerQueue(kafka, "Kafka", "Kafka", "Очередь для сырой телеметрии ИЛИ установка новых значений (через разные топики)")
+  Container(telemetry_consumer, "Сервис считывания телеметрии", "Go", "Агрегация и предобработка данных с датчиков, приведение в единый формат и запись в БД")
+  Container(telemetry_publisher, "Сервис передачи телеметрии", "Go", "Передача изменений на устройства")
+}
+
+System_Boundary(s4, "Managing Telemetry System", "Контекст управления датчиками") {
+
+  Container(video, "Видеосервис", "Go", "CDN, стриминг, управление записями, управление устройствами (камерами)")
+  Container(doors, "Сервис дверей", "Go", "Управление дверями/замками")
+  Container(light, "Сервис света", "Go", "Управление освещением")
+  Container(temperature, "Сервис температуры", "Go", "Сбор и обработка данных температуры")
+  ContainerDb(video_db, "БД для инфо по видео", "Postgresql", "Хранение метаинформации видео")
+  Container(video_cdn, "CDN", "Amazon", "Поддержка геораспределения по регионам")
+  Container(video_s3, "Хранилище видео", "S3", "Хранение записей видео")
+  ContainerDb(doors_db, "БД для сервиса дверей", "Postgresql", "Управление дверями/замками")
+  ContainerDb(light_db, "БД для сервиса света", "Postgresql", "Управление освещением")
+  ContainerDb(temperature_db, "БД для сервиса температуры", "Postgresql", "Сбор и обработка данных температуры")
+}
+
+System_Boundary(s5, "Authorization", "Авторизация и проверка доступов") {
+  Container(authorization, "Авторизация", "Go", "Авторизация пользователей")
+  ContainerDb(authorization_db, "БД с пользователями и доступами", "Postgresql", "Авторизация пользователей")
+}
+
+System_Boundary(s6, "Infra Layer", "Слой с общими сервисами") {
+  Container(api_gate, "Сервис-маршрутизатор", "Go", "Основной маршрутизатор запросов")
+  ContainerDb(cache, "Кэширование", "Redis", "Кэширование результатов запросов, пользовательских сессий и т.д.")
+  Container(scheduler, "Задания по расписанию", "Go", "Периодические задачи и фоновые воркеры")
+  ContainerQueue(rabbit, "RabbitMQ", "RabbitMQ", "Очереди для заданий по расписанию и фоновых задач")
+  Container(balancer, "Балансировщик", "Nginx", "Масштабирование единой точки отказа, распараллеливание нагрузки")
+  Container(notification, "Оповещения", "push/email/sms", "Оповещения по различным каналам о событиях")
+}
+
+' --- Внешние связи ---
+Rel(user, web, "Использует интерфейс", "REST")
+Rel(user, mobile, "Использует интерфейс", "REST")
+Rel(web, api_gate, "Вызывается сервис", "REST")
+Rel(mobile, api_gate, "Вызывается сервис", "REST")
+Rel(api_gate, scheduler, "Формирование заданий", "REST")
+Rel(api_gate, authorization, "Авторизация", "REST")
+Rel(scheduler, rabbit, "Формирование пользовательских заданий по расписанию", "AMQP")
+Rel(rabbit, api_gate, "Запуск заданий", "AMQP")
+Rel(api_gate, s4, "Связь с сервисами дверей/видео/светом/температурой", "REST")
+Rel(api_gate, subscriptions, "Управление подписками", "REST")
+Rel(telemetry_consumer, s4, "Загрузка данных с устройств", "REST")
+Rel(s4, telemetry_publisher, "Изменение данных с устройств дверей/видео/света/температуры", "REST")
+Rel(telemetry_publisher, kafka, "Публикует события телеметрии", "Kafka topics")
+
+' --- Сервис подписок ---
+Rel(subscriptions, payment, "Оплата подписок", "REST")
+Rel(subscriptions, subscriptions_db, "Сохранение данных", "SQL")
+
+' --- Сервис авторизации ---
+Rel(authorization, authorization_db, "Сохранение данных пользователя", "SQL")
+
+' --- Сервис телеметрии ---
+Rel(telemetry_consumer, telemetry_db, "Записывает предобработанную телеметрию для потенциальных аналитических отчётов", "SQL")
+Rel(kafka, telemetry_consumer, "Получает события телеметрии", "Kafka topics")
+
+' --- Сервис api gate ---
+Rel(balancer, api_gate, "Вызывается сервис", "TCP")
+Rel(api_gate, cache, "Получение значений из кэша", "TCP")
+Rel(api_gate, notification, "Оповещения о событиях", "REST")
+
+' --- Сервис Managing Telemetry System ---
+Rel(video, video_db, "Управление метаинформацией видео", "SQL")
+Rel(video, video_cdn, "Взаимодействие с данными по видео", "REST")
+Rel(video, video_s3, "Управление записями видео", "S3 API")
+Rel(doors, doors_db, "Взаимодействие с данными по дверям/замкам", "SQL")
+Rel(light, light_db, "Взаимодействие с данными по свету", "SQL")
+Rel(temperature, temperature_db, "Взаимодействие с данными по температуре", "SQL")
+
+' --- Внешние интеграции ---
+System_Ext(sensors, "Умные устройства", "IoT-устройства (датчики/камеры)")
+Rel(sensors, kafka, "Отправляются данные ИЛИ передаются новые значения", "Kafka topics")
+
+@enduml
