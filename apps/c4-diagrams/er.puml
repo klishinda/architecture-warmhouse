@@ -1,0 +1,92 @@
+@startuml
+
+entity "User" {
+  * id
+  --
+  name
+  surname
+  age
+  birthday
+  role
+  email
+  telephone
+}
+
+entity "Subscription" {
+  * id : uuid
+  --
+  plan
+  status
+  start_at
+  end_at
+}
+
+entity "House" {
+  * id
+  --
+  address
+  region
+}
+
+entity "Module" {
+  * id
+  --
+  house_id
+  name
+}
+
+entity "DeviceType" {
+  * id
+  --
+  name
+}
+
+entity "Vendor" {
+  * id
+  --
+  name
+  addition_info
+}
+
+entity "Device" {
+  * id
+  --
+  type_id
+  module_id
+  vendor_id
+  name
+  status
+  location
+  serial_number
+}
+
+entity "Telemetry" {
+  * id
+  --
+  device_id
+  timestamp
+  event
+  value
+}
+
+entity "Notification" {
+  * id
+  --
+  type
+  channel
+  template
+  body
+  sent_at
+  sent_to
+}
+
+User ||--o{ Subscription : "оформляет"
+User }o--o{ House: "многие ко многим"
+Module }o--|| House : "установлен в"
+Device }o--|| Module : "состоит из"
+Device }o--|| DeviceType : "имеет тип"
+Device }o--|| Vendor : "выпускается"
+Device ||..o{ Telemetry : "получает/отправляет"
+User }o--o{ Notification : "многие ко многим"
+
+@enduml

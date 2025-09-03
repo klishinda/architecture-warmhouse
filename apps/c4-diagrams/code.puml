@@ -1,0 +1,50 @@
+@startuml
+title "C4 диаграмма кода компонента repository_write (Проверка порогов, изменение данных, генерация событий)"
+
+package "repository_write" {
+  class Validator {
+    +validateThreshold(Sensor)
+    +validateValue(value)
+  }
+
+  class RepositoryService {
+    +applyChange(Sensor)
+    +createNotification(Sensor)
+    +manageTransaction()
+  }
+
+  class DomainService {
+    +updateTemperature(Sensor, newValue)
+    +addSensor(Sensor)
+    +removeSensor(Sensor)
+    +updateSensorInfo(Sensor)
+  }
+
+  class EventFactory {
+    +sendToSensor(Sensor)
+    +sendNotification(Sensor, eventType)
+  }
+}
+
+class api_gateway <<external>> {
+  +POST(path, body)
+}
+class temperature_db <<external>> {
+  +SQL(DML)
+}
+class app_service_write <<external>> {
+  +POST(path, body)
+}
+class telemetry_publisher <<external>> {
+  +POST(path, body)
+}
+
+RepositoryService --> Validator : вызывает
+RepositoryService --> DomainService : подготавливает
+DomainService --> temperature_db : меняет
+RepositoryService --> EventFactory : вызывает
+EventFactory --> telemetry_publisher : вызывает
+EventFactory --> api_gateway : вызывает
+app_service_write --> RepositoryService : вызывает
+
+@enduml
