@@ -1,0 +1,30 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+System_Boundary(s1, "Temperature Service", "Сервис работы с данными по температуре") {
+  ContainerDb(temperature_db, "Temperature Database", "TimescaleDB/PostgreSQL", "Хранение показаний и событий")
+  Component(update_api, "CUD Controller", "REST API", "Обрабатывает POST/PUT/DELETE запросы от API Gate")
+  Component(read_api, "Read Controller", "REST API", "Обрабатывает GET запросы от API Gate")
+  Component(app_service_read, "Application Read Service", "REST", "Оркестрирует запросы на чтение")
+  Component(app_service_write, "Application Write Service", "REST", "Оркестрирует запросы на запись")
+  Component(repository_read, "Repository Read Service", "Слой бизнес-логики", "Подготовка данных")
+  Component(repository_write, "Repository Write Service", "Слой бизнес-логики", "Проверка порогов, изменение данных, генерация событий")
+}
+
+System_Ext(api_gate, "API Gateway", "REST API")
+System_Ext(kafka_consumer, "Kafka Consumer", "REST API")
+System_Ext(telemetry_publisher, "Telemetry Publisher", "REST API")
+
+Rel(kafka_consumer, app_service_write, "Передает новые данные из Kafka")
+Rel(update_api, app_service_write, "Передает команды на создание/изменение/удаление")
+Rel(read_api, app_service_read, "Передает запросы на чтение")
+Rel(app_service_read, repository_read, "Использует доменную логику")
+Rel(app_service_write, repository_write, "Использует доменную логику")
+Rel(repository_read, temperature_db, "Вычитывает данные")
+Rel(repository_write, temperature_db, "Вычитывает и изменяет данные")
+Rel(repository_write, api_gate, "Отправка уведомлений пользователям, формирование заданий по расписанию и т.д.")
+Rel(repository_write, telemetry_publisher, "Передает изменения, исключая события из Kafka Consumer")
+Rel(api_gate, update_api, "Команды изменения/создания/удаления")
+Rel(api_gate, read_api, "Запросы на чтение")
+
+@enduml

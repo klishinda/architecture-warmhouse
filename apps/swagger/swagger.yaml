@@ -1,0 +1,332 @@
+openapi: 3.0.4
+info:
+  title: Swagger SmartHome - OpenAPI 3.0
+  version: 1.0.0
+
+paths:
+  /houses/{id}:
+    get:
+      tags:
+        - house
+      operationId: getHouseInfo
+      summary: Получение информации о доме
+      description: Возвращается информация о доме, модулях и датчиках, находящихся в нём, и пользователях, имеющих доступ к датчикам этого дома
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: House ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/House'
+        '400':
+          description: internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "internal error"
+                    message: "Сервис не работает, проверьте соединение"
+        '503':
+          description: technical maintenance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "technical maintenance"
+                    message: "Чиним, скоро всё заработает"
+                    
+  /modules/{id}:
+    get:
+      tags:
+        - module
+      operationId: getModuleInfo
+      summary: Получение информации о модуле
+      description: Возвращается информация о модуле и находящемся в нём датчиках
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Module ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Module'
+        '400':
+          description: internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "internal error"
+                    message: "Сервис не работает, проверьте соединение"
+        '503':
+          description: technical maintenance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "technical maintenance"
+                    message: "Чиним, скоро всё заработает"
+                    
+  /devices/{id}:
+    get:
+      tags:
+        - device
+      operationId: getDeviceInfo
+      summary: Получение информации о датчике
+      description: Возвращается информация о датчике умного устройства
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Device ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Module'
+        '400':
+          description: internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "internal error"
+                    message: "Сервис не работает, проверьте соединение"
+        '503':
+          description: technical maintenance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "technical maintenance"
+                    message: "Чиним, скоро всё заработает"
+                    
+    delete:
+      tags:
+        - device
+      operationId: deleteDevice
+      summary: Удаление датчика
+      description: Удаление записи из таблицы о датчике / запись с датчиком помечается к удалению
+      parameters:
+        - name: id
+          in: path
+          description: Device ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: "Датчик успешно удалён"
+        '400':
+          description: internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "internal error"
+                    message: "Датчик не был удалён, попробуйте ещё раз"
+                    
+  /devices/filter:
+    get:
+      tags:
+        - device
+      operationId: getAllDevicesByType
+      summary: Получение информации о датчиках в доме определённого типа
+      description: Возвращается информация обо всех датчиках конкретного типа
+      parameters:
+        - name: house_id
+          in: query
+          required: true
+          description: House ID
+          schema:
+            type: integer
+        - name: type_id
+          in: query
+          required: true
+          description: Device type ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '400':
+          description: internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "internal error"
+                    message: "Датчики не найдены"
+        '503':
+          description: technical maintenance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad_request:
+                  value:
+                    status: "technical maintenance"
+                    message: "Чиним, скоро всё заработает"
+
+components:
+  schemas:
+    House:
+      required:
+        - id
+        - address
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 25
+        address:
+          type: string
+          example: Москва, ул. Ленина, д. 45, корп. 1, кв. 5
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+            
+    Module:
+      required:
+        - id
+        - name
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 301
+        name:
+          type: string
+          example: набор датчиков в детской
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+    
+    Device:
+      required:
+        - id
+        - type
+        - status
+        - serial_number
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 6111
+        type:
+          type: string
+          example: влажность
+        vendor:
+          type: string
+          example: seller №1
+        name:
+          type: string
+          example: Влажность в детской
+        status:
+          type: boolean
+        serial_number:
+          type: string
+          example: A100SWD400
+          
+    User:
+      required:
+        - id
+        - name
+        - surname
+        - role
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Сергей
+        surname:
+          type: string
+          example: Сергеев
+        birthday:
+          type: string
+          format: date
+          example: 2000-01-01
+        role:
+          type: string
+          enum: [Parent, Child, Custom]
+          example: Parent
+        email:
+          type: string
+          example: test@test.ru
+        telephone:
+          type: string
+          example: "+790320010010"
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
